@@ -1,0 +1,75 @@
+{
+  "sections": {
+    "custom-banner": {
+      "type": "custom-banner",
+      "settings": {
+        "heading": "The New\nEssentials.",
+        "shop_now_label": "SHOP NOW",
+        "shop_now_url": "/collections/all",
+        "choose_gift_label": "CHOOSE GIFT",
+        "choose_gift_url": "/collections/all",
+        "ticker_text": "Free shipping on orders over $75   ★   New arrivals every week   ★   Shop the latest collection",
+        "ticker_speed": 25,
+        "min_height": 680
+      },
+      "disabled": false
+    },
+    "custom-product-grid": {
+      "type": "custom-product-grid",
+      "blocks": {
+        "card-1": {
+          "type": "product_card",
+          "settings": {
+            "product": ""
+          }
+        },
+        "card-2": {
+          "type": "product_card",
+          "settings": {
+            "product": ""
+          }
+        },
+        "card-3": {
+          "type": "product_card",
+          "settings": {
+            "product": ""
+          }
+        },
+        "card-4": {
+          "type": "product_card",
+          "settings": {
+            "product": ""
+          }
+        },
+        "card-5": {
+          "type": "product_card",
+          "settings": {
+            "product": ""
+          }
+        },
+        "card-6": {
+          "type": "product_card",
+          "settings": {
+            "product": ""
+          }
+        }
+      },
+      "block_order": [
+        "card-1",
+        "card-2",
+        "card-3",
+        "card-4",
+        "card-5",
+        "card-6"
+      ],
+      "settings": {
+        "section_heading": "Tisso vison in the wild"
+      },
+      "disabled": false
+    }
+  },
+  "order": [
+    "custom-banner",
+    "custom-product-grid"
+  ]
+}
