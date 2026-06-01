@@ -610,7 +610,15 @@
         }
       })
       .catch(function (err) {
-        popupTitle.textContent = 'Unable to load product';
+        /*
+         * Bug fix: only overwrite the title if the product never loaded
+         * (i.e. it still shows the "Loading…" placeholder). This prevents
+         * errors thrown *after* a successful fetch (e.g. in renderVariantSelectors)
+         * from clobbering the product title with "Unable to load product".
+         */
+        if (popupTitle.textContent === 'Loading…') {
+          popupTitle.textContent = 'Unable to load product';
+        }
         popupError.textContent = err.message;
       });
   }
@@ -644,7 +652,14 @@
       label.textContent = optionName;
       group.appendChild(label);
 
-      if (optionName.toLowerCase() === 'color') {
+      /*
+       * Bug fix: Shopify's product.options array can return non-string
+       * values in some edge cases. Wrap with String() before calling
+       * toLowerCase() to prevent "optionName.toLowerCase is not a function".
+       */
+      const isColor = /colou?r/i.test(String(optionName));
+
+      if (isColor) {
         /* ── Color pills ── */
         const pillsWrap = document.createElement('div');
         pillsWrap.className = 'cpg-color-pills';
@@ -677,10 +692,10 @@
         select.className = 'cpg-size-select';
         select.dataset.option = optionName;
 
-        /* Placeholder option */
+        /* Placeholder option — String() guard ensures safe toLowerCase call */
         const placeholder = document.createElement('option');
         placeholder.value    = '';
-        placeholder.textContent = 'Choose your ' + optionName.toLowerCase();
+        placeholder.textContent = 'Choose your ' + String(optionName).toLowerCase();
         placeholder.disabled  = true;
         placeholder.selected  = true;
         select.appendChild(placeholder);
