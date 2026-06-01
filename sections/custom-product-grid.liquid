@@ -1,0 +1,872 @@
+{% comment %}
+  ============================================================
+  Custom Product Grid Section — TISSO VISON
+  ============================================================
+  Layout  : "Tisso vison in the wild" heading + 3×2 photo grid
+            with 4px gap. Each card has a white "+" dot trigger.
+  Popup   : ~560px white card, image left / info right.
+            Colors → horizontal pill buttons (blue left-border on active).
+            Size   → styled native <select> ("Choose your size" placeholder).
+            CTA    → full-width black "ADD TO CART →" button via AJAX.
+  Special : If BOTH "Black" AND "Medium" are selected, also silently
+            add handle "soft-winter-jacket" to the cart.
+  JS      : 100 % vanilla – no jQuery.
+  ============================================================
+{% endcomment %}
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION HTML
+═══════════════════════════════════════════════════════════ -->
+<section class="cpg" id="cpg-{{ section.id }}">
+
+  <!-- Section heading -->
+  <h2 class="cpg__heading">{{ section.settings.section_heading }}</h2>
+
+  <!-- 3×2 product grid -->
+  <div class="cpg__grid">
+    {%- for block in section.blocks -%}
+      {%- assign product = block.settings.product -%}
+
+      {%- if product != blank -%}
+        {%- assign img = product.featured_image -%}
+        <div
+          class="cpg__card"
+          data-product-handle="{{ product.handle }}"
+          {{ block.shopify_attributes }}
+          role="button"
+          tabindex="0"
+          aria-label="View {{ product.title }}"
+        >
+          <!-- Product image -->
+          {%- if img != blank -%}
+            <img
+              class="cpg__card-img"
+              src="{{ img | image_url: width: 600 }}"
+              alt="{{ img.alt | default: product.title | escape }}"
+              loading="lazy"
+              width="600"
+            >
+          {%- else -%}
+            <div class="cpg__card-placeholder">{{ 'image' | placeholder_svg_tag }}</div>
+          {%- endif -%}
+
+          <!-- White "+" trigger dot -->
+          <button class="cpg__dot" aria-label="Quick view {{ product.title }}">+</button>
+        </div>
+      {%- else -%}
+        <!-- Empty block placeholder while no product is chosen in customizer -->
+        <div class="cpg__card cpg__card--empty" {{ block.shopify_attributes }}>
+          <span class="cpg__empty-label">Select a product</span>
+        </div>
+      {%- endif -%}
+    {%- endfor -%}
+  </div><!-- /.cpg__grid -->
+
+</section><!-- /.cpg -->
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     POPUP MARKUP  (single instance, reused for every card)
+═══════════════════════════════════════════════════════════ -->
+<div class="cpg-backdrop" id="cpg-backdrop-{{ section.id }}" aria-hidden="true">
+  <div
+    class="cpg-popup"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="cpg-popup-title-{{ section.id }}"
+  >
+
+    <!-- Close button -->
+    <button class="cpg-popup__close" aria-label="Close">&times;</button>
+
+    <!-- Left: product image -->
+    <div class="cpg-popup__img-wrap">
+      <img class="cpg-popup__img" src="" alt="" loading="lazy">
+    </div>
+
+    <!-- Right: product info -->
+    <div class="cpg-popup__info">
+      <p  class="cpg-popup__vendor"></p>
+      <h3 class="cpg-popup__title" id="cpg-popup-title-{{ section.id }}"></h3>
+      <p  class="cpg-popup__price"></p>
+      <div class="cpg-popup__desc"></div>
+
+      <!-- Variant selectors (injected by JS) -->
+      <div class="cpg-popup__variants"></div>
+
+      <!-- Error message area -->
+      <p class="cpg-popup__error" role="alert" aria-live="polite"></p>
+
+      <!-- Add to cart -->
+      <button class="cpg-popup__atc" disabled>ADD TO CART →</button>
+    </div>
+
+  </div><!-- /.cpg-popup -->
+</div><!-- /.cpg-backdrop -->
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     STYLES
+═══════════════════════════════════════════════════════════ -->
+<style>
+/* ── Section wrapper ── */
+.cpg {
+  padding: 60px 40px 80px;
+  background: #fff;
+}
+
+/* ── Section heading ── */
+.cpg__heading {
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  color: #111;
+  margin: 0 0 28px;
+}
+
+/* ── 3×2 grid ── */
+.cpg__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+/* ── Card ── */
+.cpg__card {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  cursor: pointer;
+  background: #f3f3f3;
+}
+
+.cpg__card:focus-visible {
+  outline: 2px solid #0055ff;
+  outline-offset: -2px;
+}
+
+.cpg__card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s ease;
+}
+
+.cpg__card:hover .cpg__card-img {
+  transform: scale(1.04);
+}
+
+/* ── White "+" dot ── */
+.cpg__dot {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  border: none;
+  font-size: 1.4rem;
+  line-height: 32px;
+  text-align: center;
+  cursor: pointer;
+  color: #111;
+  padding: 0;
+  transition: background 0.2s, transform 0.2s;
+  z-index: 2;
+}
+
+.cpg__dot:hover {
+  background: #fff;
+  transform: scale(1.12);
+}
+
+/* ── Empty placeholder card ── */
+.cpg__card--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed #ccc;
+  cursor: default;
+}
+
+.cpg__empty-label {
+  font-size: 0.75rem;
+  color: #aaa;
+}
+
+/* ══════════════════════════════════════════
+   BACKDROP
+══════════════════════════════════════════ */
+.cpg-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(180, 180, 180, 0.55);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.cpg-backdrop.is-open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* ══════════════════════════════════════════
+   POPUP CARD
+══════════════════════════════════════════ */
+.cpg-popup {
+  background: #fff;
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  gap: 0;
+  position: relative;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+  transform: translateY(16px);
+  transition: transform 0.25s ease;
+}
+
+.cpg-backdrop.is-open .cpg-popup {
+  transform: translateY(0);
+}
+
+/* Close button */
+.cpg-popup__close {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 1.6rem;
+  cursor: pointer;
+  color: #555;
+  line-height: 1;
+  z-index: 5;
+  padding: 4px;
+}
+
+.cpg-popup__close:hover { color: #111; }
+
+/* ── Left: image ── */
+.cpg-popup__img-wrap {
+  flex: 0 0 200px;
+  max-width: 200px;
+  overflow: hidden;
+  background: #f5f5f5;
+}
+
+.cpg-popup__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ── Right: info column ── */
+.cpg-popup__info {
+  flex: 1;
+  padding: 28px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cpg-popup__vendor {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #888;
+  margin: 0;
+}
+
+.cpg-popup__title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #111;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.cpg-popup__price {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111;
+  margin: 0;
+}
+
+.cpg-popup__desc {
+  font-size: 0.8rem;
+  color: #555;
+  line-height: 1.55;
+  /* Limit to 3 lines to keep popup compact */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Variant selectors wrapper ── */
+.cpg-popup__variants {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+/* Option group label */
+.cpg-variant-group__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #333;
+  margin: 0 0 8px;
+}
+
+/* ── Color pill buttons ── */
+.cpg-color-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cpg-color-pill {
+  padding: 6px 14px;
+  border: 1px solid #ddd;
+  background: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: border-color 0.15s, color 0.15s;
+  /* Left-border indicator (overridden when active) */
+  border-left-width: 1px;
+}
+
+.cpg-color-pill:hover {
+  border-color: #0055ff;
+  color: #0055ff;
+}
+
+/* Active state: prominent blue left border */
+.cpg-color-pill.is-active {
+  border-left: 4px solid #0055ff;
+  color: #0055ff;
+  padding-left: 10px; /* compensate for thicker border */
+}
+
+/* ── Size dropdown ── */
+.cpg-size-select {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #ddd;
+  background: #fff;
+  font-size: 0.82rem;
+  color: #333;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23333' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  cursor: pointer;
+}
+
+.cpg-size-select:focus {
+  outline: 2px solid #0055ff;
+  border-color: #0055ff;
+}
+
+/* ── Error message ── */
+.cpg-popup__error {
+  font-size: 0.78rem;
+  color: #c00;
+  margin: 0;
+  min-height: 1em;
+}
+
+/* ── Add to Cart button ── */
+.cpg-popup__atc {
+  width: 100%;
+  background: #111;
+  color: #fff;
+  border: 2px solid #111;
+  padding: 14px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  margin-top: auto;
+}
+
+.cpg-popup__atc:hover:not(:disabled) {
+  background: #fff;
+  color: #111;
+}
+
+.cpg-popup__atc:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ══════════════════════════════════════════
+   MOBILE
+══════════════════════════════════════════ */
+@media (max-width: 749px) {
+  .cpg {
+    padding: 40px 16px 60px;
+  }
+
+  /* 2-column grid on mobile */
+  .cpg__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Popup stacks vertically */
+  .cpg-popup {
+    flex-direction: column;
+    max-width: 100%;
+  }
+
+  .cpg-popup__img-wrap {
+    flex: 0 0 220px;
+    max-width: 100%;
+    width: 100%;
+    height: 220px;
+  }
+}
+</style>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+  'use strict';
+
+  /* ── Scope everything to this section instance ── */
+  const SECTION_ID  = '{{ section.id }}';
+  const grid        = document.getElementById('cpg-' + SECTION_ID);
+  const backdrop    = document.getElementById('cpg-backdrop-' + SECTION_ID);
+  const popup       = backdrop.querySelector('.cpg-popup');
+
+  /* Popup inner elements */
+  const popupImg      = popup.querySelector('.cpg-popup__img');
+  const popupVendor   = popup.querySelector('.cpg-popup__vendor');
+  const popupTitle    = popup.querySelector('.cpg-popup__title');
+  const popupPrice    = popup.querySelector('.cpg-popup__price');
+  const popupDesc     = popup.querySelector('.cpg-popup__desc');
+  const popupVariants = popup.querySelector('.cpg-popup__variants');
+  const popupError    = popup.querySelector('.cpg-popup__error');
+  const popupAtc      = popup.querySelector('.cpg-popup__atc');
+  const popupClose    = popup.querySelector('.cpg-popup__close');
+
+  /* ── State ── */
+  let currentProduct  = null;  // full product JSON from the API
+  let selectedOptions = {};    // { 'Color': 'Black', 'Size': 'Medium' }
+
+  /* ══════════════════════════════════════════
+     HELPERS
+  ══════════════════════════════════════════ */
+
+  /**
+   * Format a Shopify price integer (cents) to a currency string.
+   * e.g. 4999 → "$49.99"
+   */
+  function formatPrice(cents) {
+    return (cents / 100).toLocaleString('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    });
+  }
+
+  /**
+   * Given currently selectedOptions, find the matching variant.
+   * Returns the variant object or null.
+   */
+  function findMatchingVariant() {
+    if (!currentProduct) return null;
+    return currentProduct.variants.find(function (v) {
+      return v.options.every(function (optVal, i) {
+        const optName = currentProduct.options[i];
+        return selectedOptions[optName] === optVal;
+      });
+    }) || null;
+  }
+
+  /**
+   * Update the price display and ATC button state
+   * based on current selectedOptions.
+   */
+  function updateVariantState() {
+    const variant = findMatchingVariant();
+    popupError.textContent = '';
+
+    if (variant) {
+      popupPrice.textContent = formatPrice(variant.price);
+      popupAtc.disabled = !variant.available;
+      popupAtc.textContent = variant.available ? 'ADD TO CART →' : 'SOLD OUT';
+    } else {
+      popupAtc.disabled = true;
+    }
+  }
+
+  /* ══════════════════════════════════════════
+     POPUP OPEN / CLOSE
+  ══════════════════════════════════════════ */
+
+  /** Open backdrop + animate popup in */
+  function openPopup() {
+    backdrop.classList.add('is-open');
+    backdrop.removeAttribute('aria-hidden');
+    document.body.style.overflow = 'hidden';
+    popupClose.focus();
+  }
+
+  /** Close backdrop */
+  function closePopup() {
+    backdrop.classList.remove('is-open');
+    backdrop.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    currentProduct  = null;
+    selectedOptions = {};
+  }
+
+  /* Close on backdrop click (outside popup) */
+  backdrop.addEventListener('click', function (e) {
+    if (e.target === backdrop) closePopup();
+  });
+
+  /* Close on × button */
+  popupClose.addEventListener('click', closePopup);
+
+  /* Close on Escape key */
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && backdrop.classList.contains('is-open')) closePopup();
+  });
+
+  /* ══════════════════════════════════════════
+     LOAD PRODUCT & RENDER POPUP
+  ══════════════════════════════════════════ */
+
+  /**
+   * Fetch full product JSON from Shopify's storefront API,
+   * populate the popup, then open it.
+   */
+  function loadAndOpenPopup(handle) {
+    /* Reset UI while loading */
+    popupTitle.textContent    = 'Loading…';
+    popupVendor.textContent   = '';
+    popupPrice.textContent    = '';
+    popupDesc.innerHTML       = '';
+    popupVariants.innerHTML   = '';
+    popupError.textContent    = '';
+    popupImg.src              = '';
+    popupAtc.disabled         = true;
+    popupAtc.textContent      = 'ADD TO CART →';
+    openPopup();
+
+    fetch('/products/' + handle + '.js')
+      .then(function (res) {
+        if (!res.ok) throw new Error('Product not found');
+        return res.json();
+      })
+      .then(function (product) {
+        currentProduct  = product;
+        selectedOptions = {};
+
+        /* Image */
+        if (product.featured_image) {
+          popupImg.src = product.featured_image;
+          popupImg.alt = product.title;
+        }
+
+        /* Text */
+        popupVendor.textContent = product.vendor || '';
+        popupTitle.textContent  = product.title;
+        popupDesc.innerHTML     = product.description || '';
+
+        /* Render variant option groups */
+        renderVariantSelectors(product);
+
+        /* Set initial price from first variant */
+        if (product.variants.length) {
+          popupPrice.textContent = formatPrice(product.variants[0].price);
+        }
+      })
+      .catch(function (err) {
+        popupTitle.textContent = 'Unable to load product';
+        popupError.textContent = err.message;
+      });
+  }
+
+  /* ══════════════════════════════════════════
+     VARIANT SELECTORS
+  ══════════════════════════════════════════ */
+
+  /**
+   * Inspect each option name.
+   * - "Color" (case-insensitive) → pill buttons
+   * - Everything else → native <select> with placeholder
+   */
+  function renderVariantSelectors(product) {
+    popupVariants.innerHTML = '';
+
+    product.options.forEach(function (optionName) {
+      /* Collect unique values for this option */
+      const values = [];
+      product.variants.forEach(function (v) {
+        const idx = product.options.indexOf(optionName);
+        const val = v.options[idx];
+        if (!values.includes(val)) values.push(val);
+      });
+
+      const group = document.createElement('div');
+      group.className = 'cpg-variant-group';
+
+      const label = document.createElement('p');
+      label.className = 'cpg-variant-group__label';
+      label.textContent = optionName;
+      group.appendChild(label);
+
+      if (optionName.toLowerCase() === 'color') {
+        /* ── Color pills ── */
+        const pillsWrap = document.createElement('div');
+        pillsWrap.className = 'cpg-color-pills';
+
+        values.forEach(function (val) {
+          const pill = document.createElement('button');
+          pill.className    = 'cpg-color-pill';
+          pill.textContent  = val;
+          pill.dataset.option = optionName;
+          pill.dataset.value  = val;
+
+          pill.addEventListener('click', function () {
+            /* Deactivate siblings */
+            pillsWrap.querySelectorAll('.cpg-color-pill').forEach(function (p) {
+              p.classList.remove('is-active');
+            });
+            pill.classList.add('is-active');
+            selectedOptions[optionName] = val;
+            updateVariantState();
+          });
+
+          pillsWrap.appendChild(pill);
+        });
+
+        group.appendChild(pillsWrap);
+
+      } else {
+        /* ── Dropdown (size, etc.) ── */
+        const select = document.createElement('select');
+        select.className = 'cpg-size-select';
+        select.dataset.option = optionName;
+
+        /* Placeholder option */
+        const placeholder = document.createElement('option');
+        placeholder.value    = '';
+        placeholder.textContent = 'Choose your ' + optionName.toLowerCase();
+        placeholder.disabled  = true;
+        placeholder.selected  = true;
+        select.appendChild(placeholder);
+
+        values.forEach(function (val) {
+          const opt = document.createElement('option');
+          opt.value       = val;
+          opt.textContent = val;
+          select.appendChild(opt);
+        });
+
+        select.addEventListener('change', function () {
+          selectedOptions[optionName] = select.value;
+          updateVariantState();
+        });
+
+        group.appendChild(select);
+      }
+
+      popupVariants.appendChild(group);
+    });
+  }
+
+  /* ══════════════════════════════════════════
+     ADD TO CART
+  ══════════════════════════════════════════ */
+
+  /**
+   * POST an item to /cart/add.js and return a Promise.
+   */
+  function addToCart(variantId, quantity) {
+    return fetch('/cart/add.js', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: variantId, quantity: quantity || 1 })
+    }).then(function (res) {
+      return res.json().then(function (data) {
+        if (!res.ok) throw new Error(data.description || 'Could not add to cart');
+        return data;
+      });
+    });
+  }
+
+  /**
+   * Fetch product by handle and return its first available variant id.
+   * Used for the special "Soft Winter Jacket" auto-add.
+   */
+  function fetchFirstVariantId(handle) {
+    return fetch('/products/' + handle + '.js')
+      .then(function (res) { return res.json(); })
+      .then(function (product) {
+        const v = product.variants.find(function (v) { return v.available; })
+               || product.variants[0];
+        return v ? v.id : null;
+      });
+  }
+
+  /**
+   * ATC button click handler.
+   * 1. Find the matching variant.
+   * 2. POST to /cart/add.js.
+   * 3. SPECIAL RULE: if Color = "Black" AND Size = "Medium",
+   *    also add the "soft-winter-jacket" product.
+   * 4. On success close popup; on error show message.
+   */
+  popupAtc.addEventListener('click', function () {
+    popupError.textContent = '';
+    const variant = findMatchingVariant();
+
+    if (!variant) {
+      popupError.textContent = 'Please select all options.';
+      return;
+    }
+
+    /* Disable button and show loading state */
+    popupAtc.disabled     = true;
+    popupAtc.textContent  = 'Adding…';
+
+    /* ── Determine if we need to auto-add Soft Winter Jacket ── */
+    const colorVal = selectedOptions['Color'] || '';
+    const sizeVal  = selectedOptions['Size']  || '';
+    const triggerBonus = (
+      colorVal.toLowerCase() === 'black' &&
+      sizeVal.toLowerCase()  === 'medium'
+    );
+
+    /* Build the chain of cart additions */
+    let chain = addToCart(variant.id, 1);
+
+    if (triggerBonus) {
+      /*
+       * SPECIAL RULE: both Black + Medium selected →
+       * silently add "soft-winter-jacket" to cart as well.
+       */
+      chain = chain.then(function () {
+        return fetchFirstVariantId('soft-winter-jacket');
+      }).then(function (bonusVariantId) {
+        if (bonusVariantId) {
+          return addToCart(bonusVariantId, 1);
+        }
+      });
+    }
+
+    chain
+      .then(function () {
+        /* Refresh the Dawn cart bubble/drawer if present */
+        document.dispatchEvent(new CustomEvent('cart:refresh'));
+
+        /* Give brief visual feedback then close */
+        popupAtc.textContent = 'Added ✓';
+        setTimeout(closePopup, 700);
+      })
+      .catch(function (err) {
+        popupError.textContent  = err.message || 'Something went wrong. Please try again.';
+        popupAtc.disabled       = false;
+        popupAtc.textContent    = 'ADD TO CART →';
+      });
+  });
+
+  /* ══════════════════════════════════════════
+     CARD CLICK / KEYBOARD LISTENERS
+  ══════════════════════════════════════════ */
+
+  grid.querySelectorAll('.cpg__card[data-product-handle]').forEach(function (card) {
+    const handle = card.dataset.productHandle;
+
+    /* Clicking anywhere on the card opens the popup */
+    card.addEventListener('click', function (e) {
+      loadAndOpenPopup(handle);
+    });
+
+    /* Keyboard: Enter / Space also open popup */
+    card.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        loadAndOpenPopup(handle);
+      }
+    });
+  });
+
+})();
+</script>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCHEMA
+═══════════════════════════════════════════════════════════ -->
+{% schema %}
+{
+  "name": "Custom Product Grid",
+  "tag": "section",
+  "class": "custom-product-grid-section",
+  "max_blocks": 6,
+  "settings": [
+    {
+      "type": "text",
+      "id": "section_heading",
+      "label": "Section heading",
+      "default": "Tisso vison in the wild"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "product_card",
+      "name": "Product Card",
+      "settings": [
+        {
+          "type": "product",
+          "id": "product",
+          "label": "Product"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Custom Product Grid",
+      "blocks": [
+        { "type": "product_card" },
+        { "type": "product_card" },
+        { "type": "product_card" },
+        { "type": "product_card" },
+        { "type": "product_card" },
+        { "type": "product_card" }
+      ]
+    }
+  ]
+}
+{% endschema %}
