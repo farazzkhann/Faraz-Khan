@@ -19,6 +19,12 @@
 ═══════════════════════════════════════════════════════════ -->
 <section class="cpg" id="cpg-{{ section.id }}">
 
+  {%- comment -%}
+    .cpg__container constrains the heading and grid to 1337px and centers
+    them with margin: 0 auto. The section background stays 100% wide.
+  {%- endcomment -%}
+  <div class="cpg__container">
+
   <!-- Section heading -->
   <h2 class="cpg__heading">{{ section.settings.section_heading }}</h2>
 
@@ -61,6 +67,8 @@
       {%- endif -%}
     {%- endfor -%}
   </div><!-- /.cpg__grid -->
+
+  </div><!-- /.cpg__container -->
 
 </section><!-- /.cpg -->
 
@@ -109,10 +117,18 @@
      STYLES
 ═══════════════════════════════════════════════════════════ -->
 <style>
-/* ── Section wrapper ── */
+/* ── Section wrapper — full width background ── */
 .cpg {
-  padding: 60px 40px 80px;
   background: #fff;
+  /* No horizontal padding here — kept on the inner container so bg stays 100% wide */
+}
+
+/* ── Inner container: constrain content to 1337px, centered ── */
+.cpg__container {
+  max-width: 1337px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 60px 40px 80px;
 }
 
 /* ── Section heading ── */
@@ -427,7 +443,7 @@
    MOBILE
 ══════════════════════════════════════════ */
 @media (max-width: 749px) {
-  .cpg {
+  .cpg__container {
     padding: 40px 16px 60px;
   }
 

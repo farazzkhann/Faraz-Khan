@@ -7,34 +7,42 @@
 
 <section class="custom-banner" id="custom-banner-{{ section.id }}">
 
-  {%- comment -%} Top-right nav button {%- endcomment -%}
-  <div class="custom-banner__nav">
-    <a href="{{ section.settings.choose_gift_url }}" class="custom-banner__nav-btn">
-      {{ section.settings.choose_gift_label }} →
-    </a>
-  </div>
+  {%- comment -%}
+    .custom-banner__container constrains all hero content to 1337px and
+    centers it with margin: 0 auto. The section background remains 100% wide.
+  {%- endcomment -%}
+  <div class="custom-banner__container">
 
-  {%- comment -%} Line-art illustration {%- endcomment -%}
-  {%- if section.settings.illustration != blank -%}
-    <div class="custom-banner__illustration">
-      <img
-        src="{{ section.settings.illustration | image_url: width: 1200 }}"
-        alt="{{ section.settings.illustration.alt | escape }}"
-        loading="eager"
-        width="1200"
-      >
+    {%- comment -%} Top-right nav button {%- endcomment -%}
+    <div class="custom-banner__nav">
+      <a href="{{ section.settings.choose_gift_url }}" class="custom-banner__nav-btn">
+        {{ section.settings.choose_gift_label }} →
+      </a>
     </div>
-  {%- endif -%}
 
-  {%- comment -%} Bottom-left heading + CTA {%- endcomment -%}
-  <div class="custom-banner__content">
-    <h1 class="custom-banner__heading">{{ section.settings.heading }}</h1>
-    <a href="{{ section.settings.shop_now_url }}" class="custom-banner__shop-btn">
-      {{ section.settings.shop_now_label }} →
-    </a>
-  </div>
+    {%- comment -%} Line-art illustration {%- endcomment -%}
+    {%- if section.settings.illustration != blank -%}
+      <div class="custom-banner__illustration">
+        <img
+          src="{{ section.settings.illustration | image_url: width: 1337 }}"
+          alt="{{ section.settings.illustration.alt | escape }}"
+          loading="eager"
+          width="1337"
+        >
+      </div>
+    {%- endif -%}
 
-  {%- comment -%} Scrolling ticker strip {%- endcomment -%}
+    {%- comment -%} Bottom-left heading + CTA {%- endcomment -%}
+    <div class="custom-banner__content">
+      <h1 class="custom-banner__heading">{{ section.settings.heading }}</h1>
+      <a href="{{ section.settings.shop_now_url }}" class="custom-banner__shop-btn">
+        {{ section.settings.shop_now_label }} →
+      </a>
+    </div>
+
+  </div><!-- /.custom-banner__container -->
+
+  {%- comment -%} Scrolling ticker strip — full width, outside the container {%- endcomment -%}
   <div class="custom-banner__ticker" aria-hidden="true">
     <div class="custom-banner__ticker-track">
       {%- assign ticker_text = section.settings.ticker_text -%}
@@ -58,6 +66,18 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+  }
+
+  /* ── Inner container: constrain content to 1337px, centered ── */
+  /* Section background (#custom-banner-{{ section.id }}) stays 100% wide */
+  .custom-banner__container {
+    position: relative;
+    max-width: 1337px;
+    width: 100%;
+    margin: 0 auto;
+    height: 100%;
+    /* Inherit the full section height so absolutely-positioned children work */
+    min-height: inherit;
   }
 
   /* ── Top-right nav button ── */
